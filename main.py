@@ -61,36 +61,61 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
 
 
 def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
-    PHYSICS_TAGS = {'physics.optics', 'physics.app-ph', 'physics.class-ph', 'eess.SP'}
-    AI_TAGS = {'cs.LG', 'cs.AI', 'physics.comp-ph', 'stat.ML'}
-    
-    client = arxiv.Client(num_retries=10,delay_seconds=10)
+
+    # physics.app-ph: 应用物理 (微波/器件)
+    # eess.SP: 信号处理 (RIS/超表面通信)
+    # physics.comp-ph: 计算物理
+    # cs.LG: 机器学习
+    TARGET_KEYWORDS = [
+        "metasurface", "metamaterial", "meta-surface", "meta-material",
+        "intelligent reflecting surface", "RIS", "reconfigurable", 
+        "antenna", "microwave", "electromagnetic", "scattering",
+        "maxwell", "waveguide", "photonic", "optical"
+    ]
+
+    METHOD_KEYWORDS = [
+        "deep learning", "neural network", "machine learning",
+        "inverse design", "optimization", "generative", "diffusion model",
+        "data-driven", "transformer", "reinforcement learning", "surrogate"
+    ]
+
+    AI4SCI_KEYWORDS = [
+        "physics-informed", "pinns", "neural operator", "fno", "deeponet",
+        "scientific machine learning", "solving pde", "partial differential equation",
+        "ai4sci", "ai4phy", "ai for sci", "ai for science", "ai for phy", "ai for physics"
+    ]
+
+    client = arxiv.Client(num_retries=10, delay_seconds=10)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
+    
     if 'Feed error for query' in feed.feed.title:
-        raise Exception(f"Invalid ARXIV_QUERY: {query}.")
+        raise Exception(f"Invalid ARXIV_QUERY: {query}")
+
     if not debug:
         papers = []
-
         new_entries = [i for i in feed.entries if i.arxiv_announce_type == 'new']
         filtered_ids = []
+        
         print(f"Total raw papers fetched: {len(new_entries)}")
+
         for entry in new_entries:
-            paper_categories = {t.term for t in entry.tags}
+            content_text = (entry.title + " " + entry.summary).lower()
             
-            has_physics = not paper_categories.isdisjoint(PHYSICS_TAGS)
-            has_ai = not paper_categories.isdisjoint(AI_TAGS)
+            hit_target = any(k in content_text for k in TARGET_KEYWORDS)
+            hit_method = any(k in content_text for k in METHOD_KEYWORDS)
+            condition_1 = hit_target and hit_method
+            
+            condition_2 = any(k in content_text for k in AI4SCI_KEYWORDS)
 
-            is_comp_ph = 'physics.comp-ph' in paper_categories
-
-            if (has_physics and has_ai) or is_comp_ph:
-                # 提取 ID
+            if condition_1 or condition_2:
                 paper_id = entry.id.removeprefix("oai:arXiv.org:")
                 filtered_ids.append(paper_id)
+        # =====================================================
         
-        print(f"Papers after Intersection Filter: {len(filtered_ids)}")
+        print(f"Papers after Keyword Filter: {len(filtered_ids)}")
 
         if not filtered_ids:
-             print("No intersection papers found today.")
+             print("No papers matched your specific keywords today.")
              return []
 
         bar = tqdm(total=len(filtered_ids), desc="Retrieving Arxiv papers")
@@ -102,8 +127,8 @@ def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
         bar.close()
 
     else:
-        logger.debug("Retrieve 5 arxiv papers regardless of the date.")
-        search = arxiv.Search(query='cat:cs.AI', sort_by=arxiv.SortCriterion.SubmittedDate)
+        logger.debug("Debug mode: Fetching physics.optics")
+        search = arxiv.Search(query='cat:physics.optics', sort_by=arxiv.SortCriterion.SubmittedDate)
         papers = []
         for i in client.results(search):
             papers.append(ArxivPaper(i))
