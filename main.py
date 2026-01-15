@@ -61,16 +61,41 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
 
 
 def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
+    PHYSICS_TAGS = {'physics.optics', 'physics.app-ph', 'eess.SP', 'eess.AP'}
+    AI_TAGS = {'cs.LG', 'cs.AI', 'physics.comp-ph', 'stat.ML'}
+    
     client = arxiv.Client(num_retries=10,delay_seconds=10)
     feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
     if 'Feed error for query' in feed.feed.title:
         raise Exception(f"Invalid ARXIV_QUERY: {query}.")
     if not debug:
         papers = []
-        all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.arxiv_announce_type == 'new']
-        bar = tqdm(total=len(all_paper_ids),desc="Retrieving Arxiv papers")
-        for i in range(0,len(all_paper_ids),20):
-            search = arxiv.Search(id_list=all_paper_ids[i:i+20])
+
+        new_entries = [i for i in feed.entries if i.arxiv_announce_type == 'new']
+        filtered_ids = []
+        print(f"Total raw papers fetched: {len(new_entries)}")
+        for entry in new_entries:
+            paper_categories = {t.term for t in entry.tags}
+            
+            has_physics = not paper_categories.isdisjoint(PHYSICS_TAGS)
+            has_ai = not paper_categories.isdisjoint(AI_TAGS)
+
+            is_comp_ph = 'physics.comp-ph' in paper_categories
+
+            if (has_physics and has_ai) or is_comp_ph:
+                # 提取 ID
+                paper_id = entry.id.removeprefix("oai:arXiv.org:")
+                filtered_ids.append(paper_id)
+        
+        print(f"Papers after Intersection Filter: {len(filtered_ids)}")
+
+        if not filtered_ids:
+             print("No intersection papers found today.")
+             return []
+
+        bar = tqdm(total=len(filtered_ids), desc="Retrieving Arxiv papers")
+        for i in range(0, len(filtered_ids), 20):
+            search = arxiv.Search(id_list=filtered_ids[i:i+20])
             batch = [ArxivPaper(p) for p in client.results(search)]
             bar.update(len(batch))
             papers.extend(batch)
