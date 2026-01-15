@@ -61,7 +61,7 @@ def filter_corpus(corpus:list[dict], pattern:str) -> list[dict]:
 
 
 def get_arxiv_paper(query:str, debug:bool=False) -> list[ArxivPaper]:
-    PHYSICS_TAGS = {'physics.optics', 'physics.app-ph', 'eess.SP', 'eess.AP'}
+    PHYSICS_TAGS = {'physics.optics', 'physics.app-ph', 'physics.class-ph', 'eess.SP'}
     AI_TAGS = {'cs.LG', 'cs.AI', 'physics.comp-ph', 'stat.ML'}
     
     client = arxiv.Client(num_retries=10,delay_seconds=10)
