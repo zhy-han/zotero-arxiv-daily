@@ -146,24 +146,36 @@ def render_email(papers:list[ArxivPaper]):
     return framework.replace('__CONTENT__', content)
 
 def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:int, html:str,):
-    def _format_addr(s):
-        name, addr = parseaddr(s)
-        return formataddr((Header(name, 'utf-8').encode(), addr))
-
-    msg = MIMEText(html, 'html', 'utf-8')
-    msg['From'] = _format_addr('Github Action <%s>' % sender)
-    msg['To'] = _format_addr('You <%s>' % receiver)
-    today = datetime.datetime.now().strftime('%Y/%m/%d')
-    msg['Subject'] = Header(f'Daily arXiv {today}', 'utf-8').encode()
-
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-    except Exception as e:
-        logger.warning(f"Failed to use TLS. {e}")
-        logger.warning(f"Try to use SSL.")
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        # 1. 构建邮件对象
+        msg = MIMEMultipart()
+        msg['From'] = formataddr(["ArxivBot", sender]) # 发件人显示名字
+        msg['To'] = formataddr(["Me", receiver])
+        msg['Subject'] = Header(subject, 'utf-8')
+        
+        # 添加 HTML 正文
+        msg.attach(MIMEText(content, 'html', 'utf-8'))
 
-    server.login(sender, password)
-    server.sendmail(sender, [receiver], msg.as_string())
-    server.quit()
+        # 2. 关键点：直接使用 SMTP_SSL 连接，不要用 SMTP() 然后再 starttls
+        print(f"Connecting to {smtp_server}:{smtp_port} using SSL...")
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        
+        # 3. 打印服务器响应（调试用）
+        server.ehlo()
+        
+        # 4. 登录
+        print("Logging in...")
+        server.login(sender, password)
+        
+        # 5. 发送
+        print("Sending email...")
+        server.sendmail(sender, [receiver], msg.as_string())
+        
+        # 6. 退出
+        server.quit()
+        print("Email sent successfully!")
+
+    except Exception as e:
+        print(f"❌ Email sending failed: {e}")
+        # 这里不抛出异常，防止整个 Action 变红（如果你希望它变红提醒你，可以加上 raise e）
+        raise e
