@@ -29,6 +29,7 @@ from tempfile import mkstemp
 from paper import ArxivPaper
 from llm import set_global_llm
 import feedparser
+from datetime import datetime
 
 def get_zotero_corpus(id:str,key:str) -> list[dict]:
     zot = zotero.Zotero(id, 'user', key)
@@ -244,7 +245,9 @@ if __name__ == '__main__':
             set_global_llm(lang=args.language)
 
     html = render_email(papers)
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    subject_str = f"[{len(papers)}篇] Arxiv Daily {today_str}"
     logger.info("Sending email...")
-    send_email(args.sender, args.receiver, args.sender_password, args.smtp_server, args.smtp_port, html)
+    send_email(args.sender, args.receiver, args.sender_password, args.smtp_server, args.smtp_port, html，subject_str)
     logger.success("Email sent successfully! If you don't receive the email, please check the configuration and the junk box.")
 
