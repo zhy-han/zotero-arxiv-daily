@@ -123,7 +123,7 @@ def render_email(papers:list[ArxivPaper]):
     if len(papers) == 0 :
         return framework.replace('__CONTENT__', get_empty_html())
     
-    for p in tqdm(papers,desc='Rendering Email'):
+    for idx, p in enumerate(tqdm(papers,desc='Rendering Email'), 1):
         rate = get_stars(p.score)
         author_list = [a.name for a in p.authors]
         num_authors = len(author_list)
@@ -139,14 +139,20 @@ def render_email(papers:list[ArxivPaper]):
                 affiliations += ', ...'
         else:
             affiliations = 'Unknown Affiliation'
-        parts.append(get_block_html(p.title, authors,rate,p.arxiv_id ,p.tldr, p.pdf_url, p.code_url, affiliations))
-        time.sleep(10)
+        numbered_title = f"{idx}. {p.title}"
+        parts.append(get_block_html(numbered_title, authors,rate,p.arxiv_id ,p.tldr, p.pdf_url, p.code_url, affiliations))
+        time.sleep(5)
 
     content = '<br>' + '</br><br>'.join(parts) + '</br>'
     return framework.replace('__CONTENT__', content)
 
-def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:int, html:str,):
-    try:
+def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:int, content:str, subject:str):
+    """
+    发送邮件函数
+    参数 content: 邮件的 HTML 正文
+    参数 subject: 邮件标题 (从外部传入)
+    """
+  try:
         # 1. 构建邮件对象
         msg = MIMEMultipart()
         msg['From'] = formataddr(["ArxivBot", sender]) # 发件人显示名字
@@ -159,7 +165,7 @@ def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:
         # 2. 关键点：直接使用 SMTP_SSL 连接，不要用 SMTP() 然后再 starttls
         print(f"Connecting to {smtp_server}:{smtp_port} using SSL...")
         server = smtplib.SMTP_SSL(smtp_server, smtp_port)
-        
+
         # 3. 打印服务器响应（调试用）
         server.ehlo()
         
