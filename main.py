@@ -248,6 +248,6 @@ if __name__ == '__main__':
     today_str = datetime.now().strftime('%Y-%m-%d')
     subject_str = f"[{len(papers)}篇] Arxiv Daily {today_str}"
     logger.info("Sending email...")
-    send_email(args.sender, args.receiver, args.sender_password, args.smtp_server, args.smtp_port, html，subject_str)
+    send_email(args.sender, args.receiver, args.sender_password, args.smtp_server, args.smtp_port, html, subject_str)
     logger.success("Email sent successfully! If you don't receive the email, please check the configuration and the junk box.")
 
