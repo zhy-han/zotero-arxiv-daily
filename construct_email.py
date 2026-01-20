@@ -152,36 +152,30 @@ def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:
     参数 content: 邮件的 HTML 正文
     参数 subject: 邮件标题 (从外部传入)
     """
-  try:
-        # 1. 构建邮件对象
-        msg = MIMEMultipart()
-        msg['From'] = formataddr(["ArxivBot", sender]) # 发件人显示名字
-        msg['To'] = formataddr(["Me", receiver])
-        msg['Subject'] = Header(subject, 'utf-8')
-        
-        # 添加 HTML 正文
-        msg.attach(MIMEText(content, 'html', 'utf-8'))
+    # 1. 构建邮件对象
+    msg = MIMEMultipart()
+    msg['From'] = formataddr(["ArxivBot", sender]) # 发件人显示名字
+    msg['To'] = formataddr(["Me", receiver])
+    msg['Subject'] = Header(subject, 'utf-8')
+    
+    # 添加 HTML 正文
+    msg.attach(MIMEText(content, 'html', 'utf-8'))
 
-        # 2. 关键点：直接使用 SMTP_SSL 连接，不要用 SMTP() 然后再 starttls
-        print(f"Connecting to {smtp_server}:{smtp_port} using SSL...")
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+    # 2. 关键点：直接使用 SMTP_SSL 连接，不要用 SMTP() 然后再 starttls
+    print(f"Connecting to {smtp_server}:{smtp_port} using SSL...")
+    server = smtplib.SMTP_SSL(smtp_server, smtp_port)
 
-        # 3. 打印服务器响应（调试用）
-        server.ehlo()
-        
-        # 4. 登录
-        print("Logging in...")
-        server.login(sender, password)
-        
-        # 5. 发送
-        print("Sending email...")
-        server.sendmail(sender, [receiver], msg.as_string())
-        
-        # 6. 退出
-        server.quit()
-        print("Email sent successfully!")
-
-    except Exception as e:
-        print(f"❌ Email sending failed: {e}")
-        # 这里不抛出异常，防止整个 Action 变红（如果你希望它变红提醒你，可以加上 raise e）
-        raise e
+    # 3. 打印服务器响应（调试用）
+    server.ehlo()
+    
+    # 4. 登录
+    print("Logging in...")
+    server.login(sender, password)
+    
+    # 5. 发送
+    print("Sending email...")
+    server.sendmail(sender, [receiver], msg.as_string())
+    
+    # 6. 退出
+    server.quit()
+    print("Email sent successfully!")
